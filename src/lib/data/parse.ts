@@ -1,4 +1,4 @@
-import rawJson from './populationByYear-2.json' assert { type: 'json' };
+import rawJson from './populationByYear-1990-2025.json' assert { type: 'json' };
 import { safeParseDataset } from './schema';
 
 export function parseRaw() {

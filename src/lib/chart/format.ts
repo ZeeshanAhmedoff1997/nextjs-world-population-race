@@ -1,4 +1,6 @@
-export const fmt = new Intl.NumberFormat(undefined, {
+export const fmt = new Intl.NumberFormat('en-US', {
   notation: 'compact',
-  maximumFractionDigits: 1,
+  compactDisplay: 'short',
+  minimumFractionDigits: 0,
+  maximumFractionDigits: 2,
 });
