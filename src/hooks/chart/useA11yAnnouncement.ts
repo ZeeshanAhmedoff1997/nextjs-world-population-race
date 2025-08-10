@@ -9,8 +9,8 @@ export function useA11yAnnouncement(year: number, leader: ChartLeader) {
   const announce = useLiveRegion();
 
   useEffect(() => {
-    announce(
-      `Year changed to ${year}. Top: ${leader?.name ?? 'none'} ${leader?.pop ?? 0}.`,
-    );
-  }, [year, leader, announce]);
+    const name = leader?.name ?? 'none';
+    const pop = leader?.pop ?? 0;
+    announce(`Year changed to ${year}. Top: ${name} ${pop}.`);
+  }, [year, leader?.name, leader?.pop, announce]);
 }
