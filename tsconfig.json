@@ -21,11 +21,19 @@
         "name": "next"
       }
     ],
+    "types": ["node"],
     "paths": {
       "@/*": ["./src/*"],
       "@/lib": ["./lib/*"]
     }
   },
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
-  "exclude": ["node_modules"]
+  "exclude": [
+    "node_modules",
+    "test",
+    "**/*.dom.test.ts",
+    "**/*.dom.test.tsx",
+    "**/*.unit.test.ts",
+    "**/*.unit.test.tsx"
+  ]
 }

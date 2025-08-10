@@ -1,5 +1,4 @@
 import '@testing-library/jest-dom';
-import { vi } from 'zod/v4/locales';
 
 if (!Element.prototype.animate) {
   (Element.prototype as any).animate = function () {
