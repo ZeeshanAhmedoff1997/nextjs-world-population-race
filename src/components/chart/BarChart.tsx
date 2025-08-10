@@ -1,20 +1,15 @@
-// src/components/chart/BarChart.tsx
 'use client';
 
-import { useLayoutEffect, useMemo, useRef, memo } from 'react';
-import { linearScale, bandScale } from '@/lib/chart/scales';
-import { colorFor, getCountryFlag } from '@/lib/chart/colors';
-import { fmt } from '@/lib/chart/format';
+import { memo, useMemo, useRef } from 'react';
+
+import { CHART_STYLING } from '@/constants/chart';
+import { useBarChartAnimation } from '@/hooks/chart/useBarChartAnimation';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
-import type { BarChartProps, AnimationState } from '@/types/chart';
-import { CHART_ANIMATION } from '@/constants/animation';
-import { CHART_LAYOUT, CHART_STYLING } from '@/constants/chart';
-import { ease, cssEscape, calculateChartHeight } from '@/utils/chart';
-import {
-  shouldSkipAnimation,
-  cancelAnimations,
-  createSafeWidth,
-} from '@/utils/animation';
+import { bandScale, linearScale } from '@/lib/chart/scales';
+import type { BarChartProps } from '@/types/chart';
+
+import BarRow from './BarRow';
+import ChartDefs from './ChartDefs';
 
 const BarChart = memo(function BarChart({
   rows,
@@ -24,137 +19,22 @@ const BarChart = memo(function BarChart({
   title,
   year,
 }: BarChartProps) {
-  // Layout
   const margin = { top: 36, right: 96, bottom: 28, left: 160 };
   const innerW = Math.max(0, width - margin.left - margin.right);
   const innerH = Math.max(0, height - margin.top - margin.bottom);
 
-  // Scales for this render
   const names = useMemo(() => rows.map((r) => r.name), [rows]);
   const x = useMemo(
     () => linearScale([0, maxDomain], [0, innerW]),
     [maxDomain, innerW],
   );
   const y = useMemo(() => bandScale(names, [0, innerH], 0.25), [names, innerH]);
+  const bandwidth = y.bandwidth;
 
   const reduced = useReducedMotion();
-
-  // --- Data-driven FLIP cache: country -> AnimationState ---
-  const prev = useRef(new Map<string, AnimationState>());
-
-  // Animate using only data deltas (no DOM measuring)
   const rootRef = useRef<SVGGElement | null>(null);
-  useLayoutEffect(() => {
-    const root = rootRef.current;
-    if (!root) return;
 
-    const next = new Map<string, AnimationState>();
-
-    // Build current "Last" from scales
-    for (const r of rows) {
-      next.set(r.name, { y: y(r.name), w: x(r.pop), val: r.pop });
-    }
-
-    // Animate First -> Last per row
-    if (prev.current.size && !reduced) {
-      for (const r of rows) {
-        const key = r.name;
-        const last = next.get(key)!;
-        const first = prev.current.get(key) ?? last;
-
-        // Skip animation if positions are the same (performance optimization)
-        if (shouldSkipAnimation(first.y, last.y, first.w, last.w)) {
-          continue;
-        }
-
-        const rowEl = root.querySelector<SVGGElement>(
-          `[data-key="${cssEscape(key)}"]`,
-        );
-        if (!rowEl) continue;
-
-        const dy = first.y - last.y;
-
-        // Handle scale calculation more safely
-        const firstW = createSafeWidth(first.w, 1);
-        const lastW = createSafeWidth(last.w, 1);
-        const sx = firstW / lastW;
-
-        // Clear any existing animations efficiently
-        cancelAnimations(rowEl);
-
-        // Animate group position and scale
-        if (Math.abs(dy) > 1 || Math.abs(sx - 1) > 0.01) {
-          rowEl.animate(
-            [
-              {
-                transform: `translate(0, ${first.y}px) scaleX(${sx})`,
-                opacity: first.val === 0 ? 0.3 : 1,
-              },
-              {
-                transform: `translate(0, ${last.y}px) scaleX(1)`,
-                opacity: last.val === 0 ? 0.3 : 1,
-              },
-            ],
-            {
-              duration: CHART_ANIMATION.DURATION,
-              easing: CHART_ANIMATION.EASING,
-              fill: 'forwards',
-            },
-          );
-        }
-
-        // Animate bar width separately for smoother effect
-        const rect = rowEl.querySelector('rect');
-        if (rect && Math.abs(first.w - last.w) > 1) {
-          cancelAnimations(rect);
-          const fromW = createSafeWidth(first.w, 2);
-          const toW = createSafeWidth(last.w, 2);
-          rect.animate([{ width: fromW }, { width: toW }], {
-            duration: CHART_ANIMATION.DURATION,
-            easing: CHART_ANIMATION.EASING,
-            fill: 'forwards',
-          });
-        }
-
-        // Animate numbers (including zero transitions)
-        const label = rowEl.querySelector(
-          '[data-bar="value"]',
-        ) as SVGTextElement | null;
-        if (label) {
-          const from = first.val;
-          const to = last.val;
-
-          if (from !== to) {
-            const t0 = performance.now();
-            const tick = (t: number) => {
-              const p = Math.min(1, (t - t0) / CHART_ANIMATION.DURATION);
-              const progress = ease(p);
-
-              if (to === 0) {
-                // Animate to "—" for zero values
-                const v = Math.round(from * (1 - progress));
-                label.textContent = v === 0 ? '—' : fmt.format(v);
-              } else if (from === 0) {
-                // Animate from "—" to actual value
-                const v = Math.round(to * progress);
-                label.textContent = v === 0 ? '—' : fmt.format(v);
-              } else {
-                // Normal number animation
-                const v = Math.round(from + (to - from) * progress);
-                label.textContent = fmt.format(v);
-              }
-
-              if (p < 1) requestAnimationFrame(tick);
-            };
-            requestAnimationFrame(tick);
-          }
-        }
-      }
-    }
-
-    // Store Last as next First
-    prev.current = next;
-  }, [rows, year, x, y, reduced]);
+  useBarChartAnimation(rootRef, { rows, year, x, y, reducedMotion: reduced });
 
   return (
     <svg
@@ -163,50 +43,13 @@ const BarChart = memo(function BarChart({
       viewBox={`0 0 ${width} ${height}`}
       className='w-full h-auto drop-shadow-sm'
     >
-      <defs>
-        {/* Create gradients for each country */}
-        {rows.map((r) => {
-          const colors = colorFor(r.name);
-          return (
-            <linearGradient
-              key={colors.id}
-              id={colors.id}
-              x1='0%'
-              y1='0%'
-              x2='100%'
-              y2='0%'
-            >
-              <stop offset='0%' stopColor={colors.color1} />
-              <stop offset='100%' stopColor={colors.color2} />
-            </linearGradient>
-          );
-        })}
-
-        {/* Shadow filter */}
-        <filter id='bar-shadow' x='-20%' y='-20%' width='140%' height='140%'>
-          <feDropShadow dx='2' dy='2' stdDeviation='3' floodOpacity='0.15' />
-        </filter>
-
-        {/* Highlight gradient for bar shine effect */}
-        <linearGradient id='bar-highlight' x1='0%' y1='0%' x2='0%' y2='100%'>
-          <stop offset='0%' stopColor='rgba(255,255,255,0.8)' />
-          <stop offset='100%' stopColor='rgba(255,255,255,0.1)' />
-        </linearGradient>
-      </defs>
+      <ChartDefs rows={rows} />
 
       <title id='chart-title'>{title}</title>
       <desc id='chart-desc'>
         Animated bar chart race of country populations. Bars move to new ranks
         and widths as the year changes.
       </desc>
-
-      {/* Big year label with gradient background */}
-      <defs>
-        <linearGradient id='year-gradient' x1='0%' y1='0%' x2='100%' y2='0%'>
-          <stop offset='0%' stopColor='#6366f1' />
-          <stop offset='100%' stopColor='#8b5cf6' />
-        </linearGradient>
-      </defs>
 
       <text
         x={width / 2}
@@ -224,94 +67,16 @@ const BarChart = memo(function BarChart({
       </text>
 
       <g ref={rootRef} transform={`translate(${margin.left}, ${margin.top})`}>
-        {rows.map((r) => {
-          const yPos = y(r.name);
-          const bw = y.bandwidth;
-          const barW = Math.max(0, x(r.pop)); // Ensure non-negative width
-          const key = r.name;
-          const isZero = r.pop === 0;
-          const colors = colorFor(r.name);
-          const flag = getCountryFlag(r.name);
-
-          return (
-            <g
-              key={key}
-              data-bar='row'
-              data-key={key}
-              style={{
-                transformBox: 'fill-box',
-                transformOrigin: '0% 50%',
-                willChange: 'transform',
-                opacity: isZero ? 0.4 : 1, // Fade out countries with 0 population
-                transform: `translate(0, ${yPos}px)`, // Initial position
-                transition: 'opacity 0.3s ease',
-              }}
-            >
-              {/* country label with flag - optimized for dark background */}
-              <text
-                x={-8}
-                y={bw / 2}
-                dominantBaseline='middle'
-                textAnchor='end'
-                className={isZero ? 'fill-gray-400' : 'fill-gray-100'}
-                style={{
-                  fontSize: CHART_STYLING.COUNTRY_FONT_SIZE,
-                  fontWeight: CHART_STYLING.COUNTRY_FONT_WEIGHT,
-                  filter: 'drop-shadow(0 1px 3px rgba(0,0,0,0.7))',
-                }}
-              >
-                {flag} {r.name}
-              </text>
-
-              {/* bar with gradient and shadow */}
-              <rect
-                x={0}
-                y={2}
-                width={Math.max(4, barW)} // Minimum 4px width for visibility
-                height={bw - 4}
-                rx={Math.min(8, bw / 3)}
-                fill={`url(#${colors.id})`}
-                filter='url(#bar-shadow)'
-                style={{
-                  opacity: isZero ? 0.2 : 0.95,
-                  transition: 'opacity 0.3s ease',
-                }}
-              >
-                <title>{`${r.name}: ${fmt.format(r.pop)}`}</title>
-              </rect>
-
-              {/* Bar highlight/shine effect */}
-              <rect
-                x={0}
-                y={2}
-                width={Math.max(4, barW * 0.6)}
-                height={(bw - 4) / 3}
-                rx={Math.min(8, bw / 3)}
-                fill='url(#bar-highlight)'
-                style={{
-                  opacity: isZero ? 0 : 0.3,
-                  transition: 'opacity 0.3s ease',
-                }}
-              />
-
-              {/* value label with enhanced visibility */}
-              <text
-                data-bar='value'
-                x={Math.max(barW + 8, 16)} // Ensure label doesn't go negative
-                y={bw / 2}
-                dominantBaseline='middle'
-                className={isZero ? 'fill-gray-400' : 'fill-white'}
-                style={{
-                  fontSize: CHART_STYLING.VALUE_FONT_SIZE,
-                  fontWeight: CHART_STYLING.VALUE_FONT_WEIGHT,
-                  filter: 'drop-shadow(0 1px 3px rgba(0,0,0,0.8))',
-                }}
-              >
-                {isZero ? '—' : fmt.format(r.pop)}
-              </text>
-            </g>
-          );
-        })}
+        {rows.map((r) => (
+          <BarRow
+            key={r.name}
+            name={r.name}
+            pop={r.pop}
+            yPos={y(r.name)}
+            bandwidth={bandwidth}
+            barWidth={Math.max(0, x(r.pop))}
+          />
+        ))}
       </g>
     </svg>
   );

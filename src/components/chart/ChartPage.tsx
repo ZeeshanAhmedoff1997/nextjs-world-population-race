@@ -1,19 +1,14 @@
 'use client';
-
-import { useEffect, useMemo, useCallback, useRef } from 'react';
-import { useNumberQueryState } from '@/hooks/useQueryState';
-import { useLiveRegion } from '@/utils/a11y';
-import Pagination from './Pagination';
-import BarChart from './BarChart';
-import { useMeasure } from '@/hooks/useMeasure';
+import AnimatedBackground from '@/components/AnimatedBackground';
+import { useA11yAnnouncement } from '@/hooks/chart/useA11yAnnouncement';
+import { useChartDimensions } from '@/hooks/chart/useChartDimensions';
+import { useChartState } from '@/hooks/chart/useChartState';
 import { getCountryFlag } from '@/lib/chart/colors';
 import { fmt } from '@/lib/chart/format';
-import AnimatedBackground from '@/components/AnimatedBackground';
 import type { ChartPageProps } from '@/types/chart';
-import { useTweenedRows } from '@/hooks/useTweenedRows';
-import { CHART_LAYOUT } from '@/constants/chart';
-import { calculateChartHeight } from '@/utils/chart';
-import { CountryRow } from '@/lib/data/types';
+
+import BarChart from './BarChart';
+import Pagination from './Pagination';
 
 export default function ChartPage({
   years,
@@ -22,48 +17,16 @@ export default function ChartPage({
   maxPop,
   slicesByYear,
 }: ChartPageProps) {
-  const [year, setYear] = useNumberQueryState('year', initialYear);
-  const announce = useLiveRegion();
+  const { year, rows, currentLeader, handleYearChange } = useChartState({
+    initialYear,
+    initialRows,
+    slicesByYear,
+    tweenMs: 900,
+  });
 
-  const rawRows = useMemo(
-    () => slicesByYear[year] ?? initialRows,
-    [slicesByYear, year, initialRows],
-  );
+  useA11yAnnouncement(year, currentLeader);
 
-  const handleYearChange = useCallback(
-    (newYear: number) => {
-      setYear(newYear);
-    },
-    [setYear],
-  );
-
-  const prevRowsRef = useRef<readonly CountryRow[]>(initialRows);
-  useEffect(() => {
-    prevRowsRef.current = rawRows;
-  }, [rawRows]);
-
-  const rows = useTweenedRows(
-    prevRowsRef.current,
-    rawRows,
-    rawRows.length,
-    900,
-  );
-
-  const currentLeader = useMemo(() => rows[0], [rows]);
-
-  useEffect(() => {
-    announce(
-      `Year changed to ${year}. Top: ${currentLeader?.name ?? 'none'} ${currentLeader?.pop ?? 0}.`,
-    );
-  }, [year, currentLeader, announce]);
-
-  const { ref, width } = useMeasure<HTMLDivElement>();
-  const height = calculateChartHeight(
-    rows.length,
-    CHART_LAYOUT.ROW_HEIGHT,
-    CHART_LAYOUT.MARGIN.TOP,
-    CHART_LAYOUT.MARGIN.BOTTOM,
-  );
+  const { ref, width, height } = useChartDimensions(rows.length);
 
   return (
     <div className='min-h-screen relative overflow-hidden'>
@@ -114,7 +77,6 @@ export default function ChartPage({
           </div>
         </div>
 
-        {/* Chart in the middle */}
         <div
           ref={ref}
           className='relative rounded-3xl border border-white/30 p-8 bg-white/10 backdrop-blur-xl shadow-2xl
@@ -133,7 +95,6 @@ export default function ChartPage({
           </div>
         </div>
 
-        {/* Pagination below the chart */}
         <div className='flex justify-center pt-6'>
           <Pagination years={years} year={year} onChange={handleYearChange} />
         </div>

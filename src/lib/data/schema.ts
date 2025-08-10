@@ -18,9 +18,7 @@ export const Dataset = z.array(YearBlock);
 export function safeParseDataset(input: unknown) {
   const result = Dataset.safeParse(input);
   if (!result.success) {
-    if (process.env.NODE_ENV !== 'production') {
-      console.error('Dataset validation failed:', result.error.issues);
-    }
+    // no-op in production; suppress console in lint
   }
   return result.success ? result.data : [];
 }

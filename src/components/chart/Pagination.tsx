@@ -1,6 +1,7 @@
 'use client';
 
-import { useEffect, memo } from 'react';
+import { memo, useEffect, useState } from 'react';
+
 import type { PaginationProps } from '@/types/chart';
 
 const Pagination = memo(function Pagination({
@@ -12,8 +13,34 @@ const Pagination = memo(function Pagination({
   const prev = years[Math.max(0, idx - 1)];
   const next = years[Math.min(years.length - 1, idx + 1)];
 
+  const [isRunning, setIsRunning] = useState(false);
+  const STEP_MS = 1000;
+
+  useEffect(() => {
+    if (!isRunning) return;
+    if (idx >= years.length - 1) {
+      setIsRunning(false);
+      return;
+    }
+    const id = window.setTimeout(() => {
+      const nextIdx = Math.min(years.length - 1, idx + 1);
+      onChange(years[nextIdx]);
+    }, STEP_MS);
+    return () => window.clearTimeout(id);
+  }, [isRunning, idx, years, onChange]);
+
+  const onRunToggle = () => {
+    if (isRunning) {
+      setIsRunning(false);
+      return;
+    }
+    if (idx !== 0) onChange(years[0]);
+    setIsRunning(true);
+  };
+
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
+      setIsRunning(false);
       if (e.key === 'ArrowLeft') onChange(prev);
       else if (e.key === 'ArrowRight') onChange(next);
       else if (e.key === 'PageUp') onChange(years[Math.max(0, idx - 5)]);
@@ -28,7 +55,31 @@ const Pagination = memo(function Pagination({
     <div className='flex items-center gap-3 bg-white/10 backdrop-blur-xl rounded-2xl p-4 border border-white/20 shadow-xl'>
       <button
         type='button'
-        onClick={() => onChange(prev)}
+        onClick={onRunToggle}
+        aria-label={isRunning ? 'Pause timeline' : 'Run timeline'}
+        className='group relative px-4 py-2 bg-gradient-to-r from-emerald-500/80 to-teal-600/80 text-white font-medium rounded-lg 
+                   shadow-lg hover:shadow-xl hover:scale-110 hover:from-emerald-400 hover:to-teal-500 
+                   transition-all duration-200 ease-out cursor-pointer active:scale-95'
+      >
+        <span className='flex items-center gap-1.5'>
+          {isRunning ? (
+            <svg className='w-3 h-3' viewBox='0 0 20 20' fill='currentColor'>
+              <path d='M6 4a1 1 0 011 1v10a1 1 0 11-2 0V5a1 1 0 011-1zm7 0a1 1 0 011 1v10a1 1 0 11-2 0V5a1 1 0 011-1z' />
+            </svg>
+          ) : (
+            <svg className='w-3 h-3' viewBox='0 0 20 20' fill='currentColor'>
+              <path d='M6.5 4.5a1 1 0 011.5-.866l8 4.5a1 1 0 010 1.732l-8 4.5A1 1 0 016 13.5v-9z' />
+            </svg>
+          )}
+          <span className='text-sm'>{isRunning ? 'Pause' : 'Run'}</span>
+        </span>
+      </button>
+      <button
+        type='button'
+        onClick={() => {
+          setIsRunning(false);
+          onChange(prev);
+        }}
         disabled={idx <= 0}
         aria-label='Previous year'
         className='group relative px-4 py-2 bg-gradient-to-r from-blue-500/80 to-purple-600/80 text-white font-medium rounded-lg 
@@ -56,7 +107,10 @@ const Pagination = memo(function Pagination({
       <div className='relative'>
         <select
           value={year}
-          onChange={(e) => onChange(Number(e.target.value))}
+          onChange={(e) => {
+            setIsRunning(false);
+            onChange(Number(e.target.value));
+          }}
           className='appearance-none bg-white/20 backdrop-blur-md border border-white/30 
                      rounded-lg px-4 py-2 pr-8 font-bold text-white text-base shadow-lg
                      hover:bg-white/25 hover:border-white/40 focus:bg-white/30 focus:border-white/50 
@@ -91,7 +145,10 @@ const Pagination = memo(function Pagination({
 
       <button
         type='button'
-        onClick={() => onChange(next)}
+        onClick={() => {
+          setIsRunning(false);
+          onChange(next);
+        }}
         disabled={idx >= years.length - 1}
         aria-label='Next year'
         className='group relative px-4 py-2 bg-gradient-to-r from-purple-500/80 to-pink-600/80 text-white font-medium rounded-lg 

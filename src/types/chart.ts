@@ -1,10 +1,5 @@
-/**
- * Chart-specific type definitions
- */
-
 import type { CountryRow } from '@/lib/data/types';
 
-// Component prop types
 export interface BarChartProps {
   rows: readonly CountryRow[];
   width: number;
@@ -27,17 +22,35 @@ export interface ChartPageProps {
   maxPop: number;
   slicesByYear: Record<number, readonly CountryRow[]>;
 }
-
-// Animation state types
 export interface AnimationState {
   y: number;
   w: number;
   val: number;
 }
-
-// Color scheme types
 export interface ColorScheme {
   color1: string;
   color2: string;
   id: string;
 }
+
+export type UseChartStateArgs = {
+  initialYear: number;
+  initialRows: readonly CountryRow[];
+  slicesByYear: Record<number, readonly CountryRow[]>;
+  tweenMs?: number;
+};
+
+export type ChartLeader =
+  | {
+      name: string;
+      pop: number;
+    }
+  | undefined;
+
+export type UseBarAnimationArgs = {
+  rows: readonly CountryRow[];
+  year: number;
+  x: (n: number) => number;
+  y: (name: string) => number;
+  reducedMotion: boolean;
+};

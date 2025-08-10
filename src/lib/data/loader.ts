@@ -1,11 +1,12 @@
 import 'server-only';
 import { cache } from 'react';
-import { CHART_TOP_COUNTRIES_BAR_LIMIT as LIMIT } from '@/constants/chart';
-import type { DatasetNormalized, CountryRow } from './types';
 
+import { CHART_TOP_COUNTRIES_BAR_LIMIT as LIMIT } from '@/constants/chart';
+
+import { computeYears, freezeMap, indexByYear, toYearData } from './normalize';
 import { parseRaw } from './parse';
-import { toYearData, computeYears, indexByYear, freezeMap } from './normalize';
 import { createStableRankings } from './rankings';
+import type { CountryRow, DatasetNormalized } from './types';
 
 export const getDataset = cache<() => DatasetNormalized>(() => {
   const parsed = parseRaw();

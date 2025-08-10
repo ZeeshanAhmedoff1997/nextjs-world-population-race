@@ -15,15 +15,22 @@ export function dedupe(rows: CountryRow[]): CountryRow[] {
   return Array.from(map.values());
 }
 
-export function toYearData(parsed: any): YearData[] {
-  return parsed.map((yb: any) => {
-    const rows: CountryRow[] = yb.Countries.map((c: any) => ({
+export function toYearData(parsed: unknown): YearData[] {
+  const arr = (Array.isArray(parsed) ? parsed : []) as unknown[];
+  return arr.map((yb) => {
+    const countries = (
+      yb as {
+        Countries: Array<{ Country: string; Population: number }>;
+        Year: number;
+      }
+    ).Countries;
+    const rows: CountryRow[] = countries.map((c) => ({
       name: c.Country.trim(),
       pop: c.Population,
     }));
     const uniq = dedupe(rows);
     return Object.freeze({
-      year: yb.Year,
+      year: (yb as { Year: number }).Year,
       rows: Object.freeze(sortRows(uniq)),
     });
   });

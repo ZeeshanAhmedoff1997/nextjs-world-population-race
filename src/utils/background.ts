@@ -1,15 +1,6 @@
-/**
- * Background utility functions
- */
-
-import type { ParticleConfig } from '@/types/background';
 import { PARTICLES } from '@/constants/background';
+import type { ParticleConfig } from '@/types/background';
 
-/**
- * Generate particle configuration for static background particles
- * @param index - Particle index
- * @returns Particle configuration object
- */
 export function generateParticleConfig(index: number): ParticleConfig {
   const left = (index * PARTICLES.DISTRIBUTION_X) % 100;
   const top = (index * PARTICLES.DISTRIBUTION_Y) % 100;
@@ -23,12 +14,6 @@ export function generateParticleConfig(index: number): ParticleConfig {
     opacity,
   };
 }
-
-/**
- * Generate array of particle configurations
- * @param count - Number of particles to generate
- * @returns Array of particle configurations
- */
 export function generateParticles(count: number): ParticleConfig[] {
   return Array.from({ length: count }, (_, index) =>
     generateParticleConfig(index),
