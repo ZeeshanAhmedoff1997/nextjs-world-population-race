@@ -1,36 +1,190 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# World Population Race Visualization
 
-## Getting Started
+An interactive **Bar Chart Race** application built with **Next.js 15**, **React 19**, and **TypeScript**, visualizing the population changes of countries over time.  
+This project follows a **modular, testable, and scalable architecture**, adhering to senior-level development practices.
 
-First, run the development server:
+---
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+## 🚀 Demo
+
+You can view the live demo deployed on Vercel here: [Live Demo](https://nextjs-world-population-race.vercel.app/)
+
+## 🚀 Features
+
+- **Dynamic Bar Chart Race Animation**
+  - Smooth FLIP-based animations using the Web Animations API.
+  - Stable rankings for consistent bar transitions.
+  - Support for any configurable top-N country limit.
+
+- **Modular Architecture**
+  - Components split into presentational and logic layers.
+  - Core animation logic extracted into hooks for unit testing.
+  - Reusable utility and data processing modules.
+
+- **Accessibility (A11y)**
+  - Live region announcements for screen readers.
+  - Keyboard navigation with Arrow keys and Page Up/Down.
+
+- **Performance Optimizations**
+  - Memoized scale calculations.
+  - Minimized re-renders using `memo` and `useMemo`.
+  - Reduced DOM mutations by skipping unnecessary animations.
+
+- **Theming & Styling**
+  - TailwindCSS-based responsive design.
+  - Gradient backgrounds, shadows, and hover effects.
+  - Dark-friendly contrast adjustments.
+
+- **Data Pipeline**
+  - JSON dataset parsing with schema validation.
+  - Data normalization & deduplication.
+  - Stable rankings for animation consistency.
+
+- **Testing**
+  - **Vitest** for unit tests (hooks, utils).
+  - **React Testing Library** for component behavior tests.
+  - Full mock coverage for animation and DOM APIs.
+
+---
+
+## 📂 Folder Structure
+
+```
+src/
+├── components/
+│   └── chart/
+│       ├── AnimatedBackground.tsx
+│       ├── BarChart.tsx
+│       ├── BarRow.tsx
+│       ├── ChartDefs.tsx
+│       ├── ChartPage.tsx
+│       └── Pagination.tsx
+│
+├── constants/
+│   ├── animation.ts
+│   ├── background.ts
+│   └── chart.ts
+│
+├── hooks/
+│   ├── chart/
+│   │   ├── useA11yAnnouncement.ts
+│   │   ├── useBarChartAnimation.ts
+│   │   ├── useChartDimensions.ts
+│   │   ├── useChartScales.ts
+│   │   └── useChartState.ts
+│   ├── useMeasure.ts
+│   ├── useQueryState.ts
+│   ├── useReducedMotion.ts
+│   └── useTweenedRows.ts
+│
+├── lib/
+│   ├── chart/
+│   │   ├── colors.ts
+│   │   ├── format.ts
+│   │   └── scales.ts
+│   └── data/
+│       ├── chart/
+│       ├── index.ts
+│       ├── loader.ts
+│       ├── normalize.ts
+│       ├── parse.ts
+│       ├── rankings.ts
+│       ├── schema.ts
+│       ├── types.ts
+│       ├── populationByYear.json
+│       └── populationByYear-2.json
+│
+├── types/
+│   ├── background.ts
+│   ├── chart.ts
+│   └── country-flag-emoji.d.ts
+│
+├── utils/
+│   ├── animation.ts
+│   ├── a11y.ts
+│   ├── background.ts
+│   └── chart.ts
+│
+└── test/
+    ├── dom/
+    │   └── hooks/
+    └── setup.dom.ts
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+---
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## 🛠️ Tech Stack
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- **Framework:** Next.js 15 (App Router) + React 19
+- **Language:** TypeScript
+- **Styling:** TailwindCSS
+- **Animations:** Web Animations API + FLIP technique
+- **Testing:**
+  - Vitest (unit tests)
+  - React Testing Library (DOM/component tests)
+- **Data Validation:** Zod
+- **State Management:** React hooks
 
-## Learn More
+---
 
-To learn more about Next.js, take a look at the following resources:
+## ⚙️ Setup & Installation
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```bash
+# Install dependencies
+pnpm install
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+# Run development server
+pnpm dev
 
-## Deploy on Vercel
+# Build production bundle
+pnpm build
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+# Run tests (unit + DOM)
+pnpm test
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+---
+
+## 🧪 Testing Strategy
+
+- **Unit Tests** (`vitest`, Node environment)
+  - Utils
+  - Data processing
+  - Pure hooks (no DOM)
+- **DOM/Component Tests** (`vitest` + `@testing-library/react`, JSDOM environment)
+  - Components
+  - DOM-dependent hooks
+- **Mocked Animations**
+  - Web Animations API
+  - `requestAnimationFrame`
+
+Run tests:
+
+```bash
+pnpm test
+pnpm test:ui  # with Vitest UI
+```
+
+---
+
+## 🔧 Configuration Highlights
+
+- **Vitest Multi-Project Setup**
+  - Node environment for fast, pure logic tests.
+  - JSDOM environment for React components.
+- **Coverage thresholds:** 80%+ lines, functions, and statements.
+
+---
+
+## 📈 Performance Notes
+
+- FLIP animations ensure minimal layout thrashing.
+- Stable data rankings prevent bar jitter.
+- Gradual transitions keep animation smooth on updates.
+- Avoids redundant animations when values are unchanged.
+
+---
+
+## 👨‍💻 Author
+
+Senior-level architecture & implementation by **[ZEESHAN AHMED]**.
