@@ -6,22 +6,15 @@ import { linearScale, bandScale } from '@/lib/chart/scales';
 import { colorFor, getCountryFlag } from '@/lib/chart/colors';
 import { fmt } from '@/lib/chart/format';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
-import type { CountryRow } from '@/lib/data/types';
-
-type Props = {
-  rows: readonly CountryRow[];
-  width: number;
-  height: number;
-  maxDomain: number;
-  title: string;
-  year: number;
-};
-
-// Performance-optimized animation constants
-const ANIMATION_DURATION = 400; // Faster for better performance
-const ANIMATION_EASING = 'ease-out'; // Simpler easing for better performance
-const MIN_ANIMATION_THRESHOLD_Y = 2; // Skip animations for small position changes
-const MIN_ANIMATION_THRESHOLD_W = 4; // Skip animations for small width changes
+import type { BarChartProps, AnimationState } from '@/types/chart';
+import { CHART_ANIMATION } from '@/constants/animation';
+import { CHART_LAYOUT, CHART_STYLING } from '@/constants/chart';
+import { ease, cssEscape, calculateChartHeight } from '@/utils/chart';
+import {
+  shouldSkipAnimation,
+  cancelAnimations,
+  createSafeWidth,
+} from '@/utils/animation';
 
 const BarChart = memo(function BarChart({
   rows,
@@ -30,7 +23,7 @@ const BarChart = memo(function BarChart({
   maxDomain,
   title,
   year,
-}: Props) {
+}: BarChartProps) {
   // Layout
   const margin = { top: 36, right: 96, bottom: 28, left: 160 };
   const innerW = Math.max(0, width - margin.left - margin.right);
@@ -46,8 +39,8 @@ const BarChart = memo(function BarChart({
 
   const reduced = useReducedMotion();
 
-  // --- Data-driven FLIP cache: country -> { y: number; w: number; val: number } ---
-  const prev = useRef(new Map<string, { y: number; w: number; val: number }>());
+  // --- Data-driven FLIP cache: country -> AnimationState ---
+  const prev = useRef(new Map<string, AnimationState>());
 
   // Animate using only data deltas (no DOM measuring)
   const rootRef = useRef<SVGGElement | null>(null);
@@ -55,7 +48,7 @@ const BarChart = memo(function BarChart({
     const root = rootRef.current;
     if (!root) return;
 
-    const next = new Map<string, { y: number; w: number; val: number }>();
+    const next = new Map<string, AnimationState>();
 
     // Build current "Last" from scales
     for (const r of rows) {
@@ -70,10 +63,7 @@ const BarChart = memo(function BarChart({
         const first = prev.current.get(key) ?? last;
 
         // Skip animation if positions are the same (performance optimization)
-        if (
-          Math.abs(first.y - last.y) < MIN_ANIMATION_THRESHOLD_Y &&
-          Math.abs(first.w - last.w) < MIN_ANIMATION_THRESHOLD_W
-        ) {
+        if (shouldSkipAnimation(first.y, last.y, first.w, last.w)) {
           continue;
         }
 
@@ -85,12 +75,12 @@ const BarChart = memo(function BarChart({
         const dy = first.y - last.y;
 
         // Handle scale calculation more safely
-        const firstW = Math.max(1, first.w);
-        const lastW = Math.max(1, last.w);
+        const firstW = createSafeWidth(first.w, 1);
+        const lastW = createSafeWidth(last.w, 1);
         const sx = firstW / lastW;
 
-        // Clear any existing animations
-        rowEl.getAnimations().forEach((anim) => anim.cancel());
+        // Clear any existing animations efficiently
+        cancelAnimations(rowEl);
 
         // Animate group position and scale
         if (Math.abs(dy) > 1 || Math.abs(sx - 1) > 0.01) {
@@ -106,8 +96,8 @@ const BarChart = memo(function BarChart({
               },
             ],
             {
-              duration: ANIMATION_DURATION,
-              easing: ANIMATION_EASING,
+              duration: CHART_ANIMATION.DURATION,
+              easing: CHART_ANIMATION.EASING,
               fill: 'forwards',
             },
           );
@@ -116,12 +106,12 @@ const BarChart = memo(function BarChart({
         // Animate bar width separately for smoother effect
         const rect = rowEl.querySelector('rect');
         if (rect && Math.abs(first.w - last.w) > 1) {
-          rect.getAnimations().forEach((anim) => anim.cancel());
-          const fromW = Math.max(2, first.w);
-          const toW = Math.max(2, last.w);
+          cancelAnimations(rect);
+          const fromW = createSafeWidth(first.w, 2);
+          const toW = createSafeWidth(last.w, 2);
           rect.animate([{ width: fromW }, { width: toW }], {
-            duration: ANIMATION_DURATION,
-            easing: ANIMATION_EASING,
+            duration: CHART_ANIMATION.DURATION,
+            easing: CHART_ANIMATION.EASING,
             fill: 'forwards',
           });
         }
@@ -137,7 +127,7 @@ const BarChart = memo(function BarChart({
           if (from !== to) {
             const t0 = performance.now();
             const tick = (t: number) => {
-              const p = Math.min(1, (t - t0) / ANIMATION_DURATION);
+              const p = Math.min(1, (t - t0) / CHART_ANIMATION.DURATION);
               const progress = ease(p);
 
               if (to === 0) {
@@ -224,7 +214,7 @@ const BarChart = memo(function BarChart({
         textAnchor='middle'
         fill='url(#year-gradient)'
         style={{
-          fontSize: 32,
+          fontSize: CHART_STYLING.YEAR_FONT_SIZE,
           fontWeight: 900,
           opacity: 0.95,
           filter: 'drop-shadow(0 2px 6px rgba(0,0,0,0.5))',
@@ -265,8 +255,8 @@ const BarChart = memo(function BarChart({
                 textAnchor='end'
                 className={isZero ? 'fill-gray-400' : 'fill-gray-100'}
                 style={{
-                  fontSize: 13,
-                  fontWeight: 600,
+                  fontSize: CHART_STYLING.COUNTRY_FONT_SIZE,
+                  fontWeight: CHART_STYLING.COUNTRY_FONT_WEIGHT,
                   filter: 'drop-shadow(0 1px 3px rgba(0,0,0,0.7))',
                 }}
               >
@@ -312,8 +302,8 @@ const BarChart = memo(function BarChart({
                 dominantBaseline='middle'
                 className={isZero ? 'fill-gray-400' : 'fill-white'}
                 style={{
-                  fontSize: 13,
-                  fontWeight: 700,
+                  fontSize: CHART_STYLING.VALUE_FONT_SIZE,
+                  fontWeight: CHART_STYLING.VALUE_FONT_WEIGHT,
                   filter: 'drop-shadow(0 1px 3px rgba(0,0,0,0.8))',
                 }}
               >
@@ -328,14 +318,3 @@ const BarChart = memo(function BarChart({
 });
 
 export default BarChart;
-
-/** simple easing approximating the cubic-bezier we use for WAAPI */
-function ease(t: number) {
-  // cubic in/out-ish curve: smooth and close to EASE constant
-  return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
-}
-
-/** Escape attribute selector for country names with spaces/commas etc. */
-function cssEscape(s: string) {
-  return s.replace(/["\\]/g, '\\$&');
-}

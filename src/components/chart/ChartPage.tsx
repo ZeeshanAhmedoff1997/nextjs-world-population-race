@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useCallback } from 'react';
+import { useEffect, useMemo, useCallback, useRef } from 'react';
 import { useNumberQueryState } from '@/hooks/useQueryState';
 import { useLiveRegion } from '@/utils/a11y';
 import Pagination from './Pagination';
@@ -9,15 +9,11 @@ import { useMeasure } from '@/hooks/useMeasure';
 import { getCountryFlag } from '@/lib/chart/colors';
 import { fmt } from '@/lib/chart/format';
 import AnimatedBackground from '@/components/AnimatedBackground';
-import type { CountryRow } from '@/lib/data/types';
-
-type Props = {
-  years: readonly number[];
-  initialYear: number;
-  initialRows: readonly CountryRow[];
-  maxPop: number;
-  slicesByYear: Record<number, readonly CountryRow[]>; // <— new
-};
+import type { ChartPageProps } from '@/types/chart';
+import { useTweenedRows } from '@/hooks/useTweenedRows';
+import { CHART_LAYOUT } from '@/constants/chart';
+import { calculateChartHeight } from '@/utils/chart';
+import { CountryRow } from '@/lib/data/types';
 
 export default function ChartPage({
   years,
@@ -25,11 +21,11 @@ export default function ChartPage({
   initialRows,
   maxPop,
   slicesByYear,
-}: Props) {
+}: ChartPageProps) {
   const [year, setYear] = useNumberQueryState('year', initialYear);
   const announce = useLiveRegion();
 
-  const rows = useMemo(
+  const rawRows = useMemo(
     () => slicesByYear[year] ?? initialRows,
     [slicesByYear, year, initialRows],
   );
@@ -41,6 +37,18 @@ export default function ChartPage({
     [setYear],
   );
 
+  const prevRowsRef = useRef<readonly CountryRow[]>(initialRows);
+  useEffect(() => {
+    prevRowsRef.current = rawRows;
+  }, [rawRows]);
+
+  const rows = useTweenedRows(
+    prevRowsRef.current,
+    rawRows,
+    rawRows.length,
+    900,
+  );
+
   const currentLeader = useMemo(() => rows[0], [rows]);
 
   useEffect(() => {
@@ -50,18 +58,21 @@ export default function ChartPage({
   }, [year, currentLeader, announce]);
 
   const { ref, width } = useMeasure<HTMLDivElement>();
-  const height = 24 + 24 + rows.length * 28 + 24; // top/bottom margins + row height
+  const height = calculateChartHeight(
+    rows.length,
+    CHART_LAYOUT.ROW_HEIGHT,
+    CHART_LAYOUT.MARGIN.TOP,
+    CHART_LAYOUT.MARGIN.BOTTOM,
+  );
 
   return (
     <div className='min-h-screen relative overflow-hidden'>
-      {/* Amazing animated background - client-only to avoid hydration issues */}
       <AnimatedBackground />
 
       <section className='relative z-10 mx-auto max-w-7xl p-8 space-y-8'>
-        {/* Header */}
         <header className='text-center py-8'>
           <h1 className='text-5xl sm:text-7xl font-black bg-gradient-to-r from-white via-blue-100 to-purple-200 bg-clip-text text-transparent mb-4 drop-shadow-2xl'>
-            🌍 World Population Race
+            World Population Race
           </h1>
           <p className='text-xl text-blue-100 font-medium max-w-2xl mx-auto leading-relaxed'>
             Interactive visualization of population growth across countries
@@ -69,7 +80,6 @@ export default function ChartPage({
           </p>
         </header>
 
-        {/* Statistics/Trending cards at the top */}
         <div className='grid grid-cols-1 md:grid-cols-3 gap-6 mb-8'>
           <div className='bg-white/10 backdrop-blur-xl rounded-3xl p-6 border border-white/20 shadow-2xl hover:bg-white/15 transition-all duration-300 transform hover:scale-105'>
             <h3 className='text-lg font-bold text-white mb-2 flex items-center gap-2'>

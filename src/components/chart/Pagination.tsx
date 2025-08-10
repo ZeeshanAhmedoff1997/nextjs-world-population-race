@@ -1,14 +1,13 @@
 'use client';
 
 import { useEffect, memo } from 'react';
+import type { PaginationProps } from '@/types/chart';
 
-type Props = {
-  years: readonly number[];
-  year: number;
-  onChange: (nextYear: number) => void;
-};
-
-const Pagination = memo(function Pagination({ years, year, onChange }: Props) {
+const Pagination = memo(function Pagination({
+  years,
+  year,
+  onChange,
+}: PaginationProps) {
   const idx = years.indexOf(year);
   const prev = years[Math.max(0, idx - 1)];
   const next = years[Math.min(years.length - 1, idx + 1)];

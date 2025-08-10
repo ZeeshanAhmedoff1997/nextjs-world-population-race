@@ -2,11 +2,8 @@
 
 import { useEffect, useState, memo } from 'react';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
-
-// Performance-optimized constants
-const PARTICLE_COUNT = 12;
-const PARTICLE_DISTRIBUTION_X = 23;
-const PARTICLE_DISTRIBUTION_Y = 37;
+import { PARTICLES } from '@/constants/background';
+import { generateParticles } from '@/utils/background';
 
 const AnimatedBackground = memo(function AnimatedBackground() {
   const [isMounted, setIsMounted] = useState(false);
@@ -33,23 +30,16 @@ const AnimatedBackground = memo(function AnimatedBackground() {
 
       {/* Static particles for optimal performance */}
       <div className='absolute inset-0 pointer-events-none'>
-        {[...Array(PARTICLE_COUNT)].map((_, i) => {
-          const left = (i * PARTICLE_DISTRIBUTION_X) % 100;
-          const top = (i * PARTICLE_DISTRIBUTION_Y) % 100;
-          const size = i % 3 === 0 ? 'w-1.5 h-1.5' : 'w-1 h-1';
-          const opacity = i % 4 === 0 ? 'opacity-40' : 'opacity-25';
-
-          return (
-            <div
-              key={i}
-              className={`absolute ${size} bg-white rounded-full ${opacity}`}
-              style={{
-                left: `${left}%`,
-                top: `${top}%`,
-              }}
-            />
-          );
-        })}
+        {generateParticles(PARTICLES.COUNT).map((particle, i) => (
+          <div
+            key={i}
+            className={`absolute ${particle.size} bg-white rounded-full ${particle.opacity}`}
+            style={{
+              left: `${particle.left}%`,
+              top: `${particle.top}%`,
+            }}
+          />
+        ))}
       </div>
 
       {/* Grid pattern overlay */}

@@ -1,5 +1,5 @@
 import ChartPage from '@/components/chart/ChartPage';
-import { getYears, getSlice, getMaxPop, getAllSlices } from '@/lib/data/load';
+import { getYears, getSlice, getMaxPop, getAllSlices } from '@/lib/data';
 
 export default function Page() {
   const years = getYears();
@@ -9,9 +9,9 @@ export default function Page() {
     <ChartPage
       years={years}
       initialYear={initialYear}
-      initialRows={getSlice(initialYear, 15)} // Show 15 countries for bonus
+      initialRows={getSlice(initialYear)}
       maxPop={getMaxPop()}
-      slicesByYear={getAllSlices(15)} // Use top 15 for smooth animations
+      slicesByYear={getAllSlices()}
     />
   );
 }

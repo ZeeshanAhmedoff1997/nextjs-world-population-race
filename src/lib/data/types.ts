@@ -18,6 +18,5 @@ export type DatasetNormalized = Readonly<{
   years: readonly number[];
   byYear: ReadonlyMap<number, readonly CountryRow[]>;
   maxPop: number;
-  top10: ReadonlyMap<number, readonly CountryRow[]>;
-  top15: ReadonlyMap<number, readonly CountryRow[]>;
+  topN: ReadonlyMap<number, readonly CountryRow[]>;
 }>;
