@@ -34,6 +34,7 @@ export interface ColorScheme {
 }
 
 export type UseChartStateArgs = {
+  years: readonly number[];
   initialYear: number;
   initialRows: readonly CountryRow[];
   slicesByYear: Record<number, readonly CountryRow[]>;

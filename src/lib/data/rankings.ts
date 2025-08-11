@@ -1,3 +1,5 @@
+import { EPS } from '@/constants/chart';
+
 import type { CountryRow, YearData } from './types';
 
 export function createStableRankings(
@@ -16,7 +18,11 @@ export function createStableRankings(
     const stableRows: CountryRow[] = stableCountries.map(
       (name) => yearRows.get(name) || { name, pop: 0 },
     );
-    stableRows.sort((a, b) => b.pop - a.pop || a.name.localeCompare(b.name));
+    stableRows.sort((a, b) => {
+      const d = b.pop - a.pop;
+      if (Math.abs(d) > EPS) return d;
+      return a.name.localeCompare(b.name);
+    });
     rankings.set(yd.year, Object.freeze(stableRows.slice(0, n)));
   }
   return rankings;

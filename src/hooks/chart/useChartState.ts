@@ -8,12 +8,22 @@ import type { CountryRow } from '@/lib/data/types';
 import type { UseChartStateArgs } from '@/types/chart';
 
 export function useChartState({
+  years,
   initialYear,
   initialRows,
   slicesByYear,
   tweenMs = 900,
 }: UseChartStateArgs) {
   const [year, setYear] = useNumberQueryState('year', initialYear);
+
+  useEffect(() => {
+    if (!years?.length) return;
+    const min = years[0];
+    const max = years[years.length - 1];
+    if (year < min || year > max) {
+      setYear(initialYear);
+    }
+  }, [year, years, initialYear, setYear]);
 
   const rawRows = useMemo(
     () => slicesByYear[year] ?? initialRows,

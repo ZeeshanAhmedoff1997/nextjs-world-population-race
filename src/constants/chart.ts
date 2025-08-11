@@ -24,3 +24,5 @@ export const CHART_STYLING = {
 } as const;
 
 export const CHART_TOP_COUNTRIES_BAR_LIMIT = 10;
+
+export const EPS = 1;

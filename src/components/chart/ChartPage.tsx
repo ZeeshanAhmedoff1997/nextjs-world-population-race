@@ -18,6 +18,7 @@ export default function ChartPage({
   slicesByYear,
 }: ChartPageProps) {
   const { year, rows, currentLeader, handleYearChange } = useChartState({
+    years,
     initialYear,
     initialRows,
     slicesByYear,

@@ -1,9 +1,13 @@
+import { EPS } from '@/constants/chart';
+
 import type { CountryRow, YearData } from './types';
 
 export function sortRows(rows: CountryRow[]): CountryRow[] {
-  return rows
-    .slice()
-    .sort((a, b) => b.pop - a.pop || a.name.localeCompare(b.name));
+  return rows.slice().sort((a, b) => {
+    const d = b.pop - a.pop;
+    if (Math.abs(d) > EPS) return d;
+    return a.name.localeCompare(b.name);
+  });
 }
 
 export function dedupe(rows: CountryRow[]): CountryRow[] {
